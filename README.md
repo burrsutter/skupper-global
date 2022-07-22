@@ -170,10 +170,10 @@ select * from work;
 ```
 
 ```
- id |       message        |    processedby     | processingtime | result
-----+----------------------+--------------------+----------------+--------
-  1 | Processed Recs: 429  | silversurfer.local |            429 |    852
-  2 | Processed Recs: 1275 | silversurfer.local |            425 |   1263
+id | location  |       message       |    processedby     | processingtime | result
+----+-----------+---------------------+--------------------+----------------+--------
+  1 | localhost | Processed Recs: 399 | silversurfer.local |            133 |    762
+  2 | localhost | Processed Recs: 548 | silversurfer.local |            274 |    268
 ```
 
 
@@ -186,7 +186,87 @@ exit
 
 ## Push Worker to Cluster
 
+```
+kubectl apply -f transaction-deployment.yaml
+```
+
+```
+kubectl set env deployment/transactor LOCATION=Tokyo 
+```
+
+```
+kubectl exec -it deploy/transactor -- bash 
+```
+
+```
+curl localhost:8080/2
+```
+
+## Add another cluster: CapeTown
+
+```
+export KUBECONFIG=/Users/burr/xKS/.kubeconfig/capetown-config
+
+eksctl create cluster \
+--name capetown \
+--region af-south-1 \
+--nodegroup-name myEKSworkers \
+--instance-types=m5.xlarge \
+--nodes 2 \
+--managed
+```
+
+```
+eksctl utils write-kubeconfig --cluster=capetown --region=af-south-1
+
+aws eks update-kubeconfig --name=capetown --region=af-south-1
+```
+
+```
+kubectl create namespace oltp
+kubectl config set-context --current --namespace=oltp
+```
+
+```
+skupper init
+```
+
+#### On Toyko
+
+```
+skupper token create token.yaml -t cert
+```
+
+#### On CapeTown
+
+```
+skupper link create token.yaml
+```
+
+```
+skupper status
+Skupper is enabled for namespace "oltp" in interior mode. It is connected to 2 other sites (1 indirectly). It has 2 exposed services.
+The site console url is:  https://a3df2817e3ef7406fbdaa0b081100751-262154857.af-south-1.elb.amazonaws.com:8080
+The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
+```
+
+```
+kubectl get services
+```
+
+```
+NAME                   TYPE           CLUSTER-IP       EXTERNAL-IP                                                                PORT(S)                           AGE
+oltp-rdbms             ClusterIP      10.100.155.195   <none>                                                                     5432/TCP                          42s
+on-prem-app            ClusterIP      10.100.12.66     <none>                                                                     8080/TCP                          42s
+skupper                LoadBalancer   10.100.26.136    a3df2817e3ef7406fbdaa0b081100751-262154857.af-south-1.elb.amazonaws.com    8080:31256/TCP,8081:32340/TCP     3m39s
+skupper-router         LoadBalancer   10.100.193.113   aea01ffacec924f05aeb6e5b948befcb-1149588767.af-south-1.elb.amazonaws.com   55671:30820/TCP,45671:30467/TCP   3m45s
+skupper-router-local   ClusterIP      10.100.154.40    <none>                                                                     5671/TCP                          3m45s
+```
 
 
 
+## Clean up
 
+```
+eksctl delete cluster --name capetown --region af-south-1
+```

@@ -2,29 +2,29 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: psql
-  name: psql
+    app: transactor
+  name: transactor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: psql
+      app: transactor
   template:
     metadata:
       labels:
-        app: psql
+        app: transactor
     spec:
       containers:
-      - name: psql
+      - name: transactor
         image: docker.io/burrsutter/transaction:1.0.0
         env:
           - name: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION
             value: update
-          - name: QUARKUS.DATASOURCE.JDBC.URL
+          - name: QUARKUS_DATASOURCE_JDBC_URL
             value: jdbc:postgresql://oltp-rdbms:5432/transactions
-          - name: QUARKUS.DATASOURCE.USERNAME
+          - name: QUARKUS_DATASOURCE_USERNAME
             value: myuser
-          - name: QUARKUS.DATASOURCE.PASSWORD
+          - name: QUARKUS_DATASOURCE_PASSWORD
             value: mypassword
         resources:
           requests: 
