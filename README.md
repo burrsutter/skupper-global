@@ -52,7 +52,7 @@ https://github.com/burrsutter/gke-skupper
 
 
 ```
-skupper init
+skupper init --site-name tokyo
 ```
 
 ```
@@ -191,7 +191,7 @@ kubectl apply -f transaction-deployment.yaml
 ```
 
 ```
-kubectl set env deployment/transactor LOCATION=Tokyo 
+kubectl set env deployment/transactor LOCATION=Tokyo
 ```
 
 ```
@@ -228,7 +228,7 @@ kubectl config set-context --current --namespace=oltp
 ```
 
 ```
-skupper init
+skupper init --site-name capetown
 ```
 
 #### On Toyko
@@ -263,10 +263,61 @@ skupper-router         LoadBalancer   10.100.193.113   aea01ffacec924f05aeb6e5b9
 skupper-router-local   ClusterIP      10.100.154.40    <none>                                                                     5671/TCP                          3m45s
 ```
 
+```
+skupper service status
+Services exposed through Skupper:
+├─ oltp-rdbms (tcp port 5432)
+╰─ on-prem-app (http port 8080)
+```
 
+```
+kubectl apply -f transaction-deployment.yaml
+```
+
+```
+kubectl set env deployment/transactor LOCATION=CapeTown
+```
+
+```
+kubectl exec -it deploy/transactor -- bash 
+```
+
+```
+curl localhost:8080/2
+```
+
+![pgAdmin](images/pgadmin-2.png)
+
+
+### Console: Cape Town
+
+hostname for AWS, ip for others
+
+```
+CONSOLECAPETOWN=$(kubectl get service skupper -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"):8080
+```
+
+Password
+
+```
+CONSOLEPASSWORDCAPETOWN=$(kubectl get secret skupper-console-users -o jsonpath='{.data.admin}' | base64 -d)
+```
+
+```
+open https://$CONSOLECAPETOWN
+```
+
+Login with `admin` and $CONSOLEPASSWORDCAPETOWN
+
+
+![Skupper Cape Town](images/skupper-console-capetown-1.png)
 
 ## Clean up
 
 ```
 eksctl delete cluster --name capetown --region af-south-1
+```
+
+```
+az aks delete --resource-group myAKSTokyoResourceGroup --name tokyo
 ```
