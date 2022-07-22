@@ -340,12 +340,10 @@ Login with `admin` and $CONSOLEPASSWORDCAPETOWN
 ```
 export KUBECONFIG=/Users/burr/xKS/.kubeconfig/sydney-config
 
-gcloud container clusters create sydney --zone australia-southeast1 --num-nodes 1
+gcloud container clusters create sydney --zone australia-southeast1 --num-nodes 1 --machine-type e2-standard-4
 
 gcloud container clusters get-credentials sydney --zone australia-southeast1 
 ```
-
-TODO: change GKE default machine type, something bigger than e2-medium --machine-type 
 
 ```
 kubectl create namespace oltp
@@ -356,16 +354,22 @@ kubectl config set-context --current --namespace=oltp
 skupper init --site-name sydney
 ```
 
-#### On Cape Town
+```
+skupper status
+Skupper is enabled for namespace "oltp" with site name "sydney" in interior mode. It is not connected to any other sites. It has no exposed services.
+The site console url is:  https://35.189.26.175:8080
+The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
+```
 
 ```
-skupper token create token-cape-town.yaml -t cert
+skupper service status
+No services defined
 ```
 
-#### On Sydney
+Connect it to Tokyo
 
 ```
-skupper link create token-cape-town.yaml
+skupper link create token.yaml
 ```
 
 
@@ -389,7 +393,7 @@ kubectl exec -it deploy/transactor -- bash
 ```
 
 ```
-curl on-prem-app:8080/2
+curl localhost:8080/2
 ```
 
 ### Console: Sydney
