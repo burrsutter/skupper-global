@@ -202,6 +202,29 @@ kubectl exec -it deploy/transactor -- bash
 curl localhost:8080/2
 ```
 
+### Console: Tokyo
+
+hostname for AWS, ip for others
+
+```
+CONSOLETOKYO=$(kubectl get service skupper -o jsonpath="{.status.loadBalancer.ingress[0].ip}"):8080
+```
+
+Password
+
+```
+CONSOLEPASSWORDTOKYO=$(kubectl get secret skupper-console-users -o jsonpath='{.data.admin}' | base64 -d)
+```
+
+```
+open https://$CONSOLETOKYO
+```
+
+Login with `admin` and $CONSOLEPASSWORDTOKYO
+
+
+
+
 ## Add another cluster: CapeTown
 
 ```
@@ -312,7 +335,90 @@ Login with `admin` and $CONSOLEPASSWORDCAPETOWN
 
 ![Skupper Cape Town](images/skupper-console-capetown-1.png)
 
+## Add Sydney
+
+```
+export KUBECONFIG=/Users/burr/xKS/.kubeconfig/sydney-config
+
+gcloud container clusters create sydney --zone australia-southeast1 --num-nodes 1
+
+gcloud container clusters get-credentials sydney --zone australia-southeast1 
+```
+
+TODO: change GKE default machine type, something bigger than e2-medium --machine-type 
+
+```
+kubectl create namespace oltp
+kubectl config set-context --current --namespace=oltp
+```
+
+```
+skupper init --site-name sydney
+```
+
+#### On Cape Town
+
+```
+skupper token create token-cape-town.yaml -t cert
+```
+
+#### On Sydney
+
+```
+skupper link create token-cape-town.yaml
+```
+
+
+```
+skupper service status
+Services exposed through Skupper:
+├─ oltp-rdbms (tcp port 5432)
+╰─ on-prem-app (http port 8080)
+```
+
+```
+kubectl apply -f transaction-deployment.yaml
+```
+
+```
+kubectl set env deployment/transactor LOCATION=Sydney
+```
+
+```
+kubectl exec -it deploy/transactor -- bash 
+```
+
+```
+curl on-prem-app:8080/2
+```
+
+### Console: Sydney
+
+hostname for AWS, ip for others
+
+```
+CONSOLESYDNEY=$(kubectl get service skupper -o jsonpath="{.status.loadBalancer.ingress[0].ip}"):8080
+```
+
+Password
+
+```
+CONSOLEPASSWORDSYDNEY=$(kubectl get secret skupper-console-users -o jsonpath='{.data.admin}' | base64 -d)
+```
+
+```
+open https://$CONSOLESYDNEY
+```
+
+Login with `admin` and $CONSOLEPASSWORDCAPETOWN
+
+
+
 ## Clean up
+
+```
+gcloud container clusters delete sydney --zone australia-southeast1
+```
 
 ```
 eksctl delete cluster --name capetown --region af-south-1
@@ -321,3 +427,4 @@ eksctl delete cluster --name capetown --region af-south-1
 ```
 az aks delete --resource-group myAKSTokyoResourceGroup --name tokyo
 ```
+
