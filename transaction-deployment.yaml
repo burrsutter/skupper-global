@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: psql
+  name: psql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: psql
+  template:
+    metadata:
+      labels:
+        app: psql
+    spec:
+      containers:
+      - name: psql
+        image: docker.io/burrsutter/transaction:1.0.0
+        env:
+          - name: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION
+            value: update
+          - name: QUARKUS.DATASOURCE.JDBC.URL
+            value: jdbc:postgresql://oltp-rdbms:5432/transactions
+          - name: QUARKUS.DATASOURCE.USERNAME
+            value: myuser
+          - name: QUARKUS.DATASOURCE.PASSWORD
+            value: mypassword
+        resources:
+          requests: 
+            memory: "500Mi" 
+            cpu: "1000m" 
+          limits:
+            memory: "500Mi"
+            cpu: "1000m" 

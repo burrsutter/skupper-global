@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: psql
+  name: psql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: psql
+  template:
+    metadata:
+      labels:
+        app: psql
+    spec:
+      containers:
+      - name: psql
+        image: docker.io/burrsutter/psql-client
+        env:
+          - name: PGDATABASE
+            value: transactions
+          - name: PGUSER
+            value: myuser
+          - name: PGPASSWORD
+            value: mypassword
+          - name: PGHOST
+            value: oltp-rdbms
+        resources:
+          requests: 
+            memory: "300Mi" 
+            cpu: "250m" 
+          limits:
+            memory: "300Mi"
+            cpu: "250m" 
+        stdin: true
+        tty: true
+        command: ["/bin/sh"]
