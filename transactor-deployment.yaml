@@ -4,6 +4,8 @@ metadata:
   labels:
     app: transactor
   name: transactor
+  annotations:
+    skupper.io/proxy: "http"  
 spec:
   replicas: 1
   selector:
@@ -34,3 +36,6 @@ spec:
           limits:
             memory: "500Mi"
             cpu: "1000m" 
+        ports:
+        - containerPort: 8080
+          name: "http"     

@@ -187,7 +187,33 @@ exit
 ## Push Worker to Cluster
 
 ```
-kubectl apply -f transaction-deployment.yaml
+kubectl apply -f transactor-deployment.yaml
+```
+
+```
+kubectl get services
+NAME                   TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                           AGE
+oltp-rdbms             ClusterIP      10.0.8.132     <none>          5432/TCP                          5h49m
+on-prem-app            ClusterIP      10.0.181.77    <none>          8080/TCP                          5h49m
+skupper                LoadBalancer   10.0.16.148    20.188.21.153   8080:30652/TCP,8081:31420/TCP     5h51m
+skupper-router         LoadBalancer   10.0.32.34     20.188.19.119   55671:32394/TCP,45671:31407/TCP   5h51m
+skupper-router-local   ClusterIP      10.0.183.208   <none>          5671/TCP                          5h51m
+transactor             ClusterIP      10.0.116.119   <none>          8080/TCP                          82s
+```
+
+Because of the special annotation on the Deployment
+
+```
+  annotations:
+    skupper.io/proxy: "http"  
+```
+
+and the matching exposed container port
+
+```
+        ports:
+        - containerPort: 8080
+          name: "http"
 ```
 
 ```
@@ -208,6 +234,7 @@ hostname for AWS, ip for others
 
 ```
 CONSOLETOKYO=$(kubectl get service skupper -o jsonpath="{.status.loadBalancer.ingress[0].ip}"):8080
+echo $CONSOLETOKYO
 ```
 
 Password
@@ -299,6 +326,27 @@ kubectl apply -f transaction-deployment.yaml
 
 ```
 kubectl set env deployment/transactor LOCATION=CapeTown
+```
+
+```
+NAME                   TYPE           CLUSTER-IP       EXTERNAL-IP                                                                PORT(S)                           AGE
+oltp-rdbms             ClusterIP      10.100.112.247   <none>                                                                     5432/TCP                          5h58m
+on-prem-app            ClusterIP      10.100.227.207   <none>                                                                     8080/TCP                          5h58m
+skupper                LoadBalancer   10.100.170.197   a28befab4a4d44f5493e5a085f3a6c2d-2032781943.af-south-1.elb.amazonaws.com   8080:30744/TCP,8081:31787/TCP     6h2m
+skupper-router         LoadBalancer   10.100.85.149    a75e6fc725f9e45d298962a5f541f692-225662935.af-south-1.elb.amazonaws.com    55671:31791/TCP,45671:32438/TCP   6h2m
+skupper-router-local   ClusterIP      10.100.183.213   <none>                                                                     5671/TCP                          6h2m
+transactor             ClusterIP      10.100.112.47    <none>                                                                     8080/TCP                          12m
+```
+
+
+```
+skupper service status
+Services exposed through Skupper:
+├─ oltp-rdbms (tcp port 5432)
+├─ on-prem-app (http port 8080)
+╰─ transactor (http port 8080)
+   ╰─ Targets:
+      ╰─ app=transactor name=transactor
 ```
 
 ```
@@ -396,6 +444,9 @@ kubectl exec -it deploy/transactor -- bash
 curl localhost:8080/2
 ```
 
+![pgAdmin](images/pgadmin-3.png)
+
+
 ### Console: Sydney
 
 hostname for AWS, ip for others
@@ -408,6 +459,7 @@ Password
 
 ```
 CONSOLEPASSWORDSYDNEY=$(kubectl get secret skupper-console-users -o jsonpath='{.data.admin}' | base64 -d)
+echo $CONSOLEPASSWORDSYDNEY
 ```
 
 ```
@@ -415,6 +467,56 @@ open https://$CONSOLESYDNEY
 ```
 
 Login with `admin` and $CONSOLEPASSWORDCAPETOWN
+
+
+## Gateway transactor to on-premises
+
+```
+skupper gateway delete
+```
+
+```
+docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+The use of Forwards involves the use of the Bundle
+
+```
+mkdir -p bundle/localhost-services
+cp captureports.py bundle/localhost-services
+```
+
+```
+skupper gateway generate-bundle skuppered-forwarded-services.yaml ./bundle/localhost-services
+```
+
+```
+mkdir gateway
+
+tar -xvf ./bundle/localhost-services/skuppered-services.tar.gz --directory gateway
+
+cd gateway
+
+chmod +x *.sh
+```
+
+```
+./launch.sh -t docker
+```
+
+```
+docker ps
+```
+
+```
+CONTAINER ID   IMAGE                                  COMMAND                  CREATED          STATUS          PORTS     NAMES
+630b501cb1e5   quay.io/skupper/skupper-router:2.0.2   "/home/skrouterd/bin…"   15 seconds ago   Up 14 seconds             skuppered-services
+```
+
+```
+skupper gateway forward transactor 8081
+```
 
 
 
