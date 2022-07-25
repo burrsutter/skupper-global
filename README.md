@@ -534,3 +534,76 @@ eksctl delete cluster --name capetown --region af-south-1
 az aks delete --resource-group myAKSTokyoResourceGroup --name tokyo
 ```
 
+# Forwards Testing
+
+```
+export KUBECONFIG=/Users/burr/xKS/.kubeconfig/aks-tokyo-config
+
+az login
+
+az group create --name myAKSTokyoResourceGroup --location japaneast
+
+az aks create --resource-group myAKSTokyoResourceGroup --name tokyo -s Standard_DS3_v2 --node-count 2
+```
+
+
+```
+az aks get-credentials --resource-group myAKSTokyoResourceGroup --name tokyo --file $KUBECONFIG --overwrite
+```
+
+```
+kubectl create namespace oltp
+kubectl config set-context --current --namespace=oltp
+```
+
+```
+skupper init --site-name tokyo
+```
+
+
+```
+kubectl apply -f forwarded-deployment.yaml
+```
+
+```
+docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+The use of Forwards involves the use of the Bundle
+
+```
+mkdir -p bundle/forwarded-services
+cp captureports.py bundle/forwarded-services
+```
+
+```
+skupper gateway generate-bundle skuppered-forwarded-services.yaml ./bundle/forwarded-services
+```
+
+```
+mkdir gateway
+
+tar -xvf ./bundle/forwarded-services/skuppered-services.tar.gz --directory gateway
+
+cd gateway
+
+chmod +x *.sh
+```
+
+```
+./launch.sh -t docker
+```
+
+```
+docker ps
+```
+
+```
+CONTAINER ID   IMAGE                                  COMMAND                  CREATED         STATUS        PORTS     NAMES
+f2f714fcca3b   quay.io/skupper/skupper-router:2.0.2   "/home/skrouterd/bin…"   2 seconds ago   Up 1 second             skuppered-services
+```
+
+```
+curl localhost:8081
+```

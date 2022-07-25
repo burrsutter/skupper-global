@@ -1,31 +1,12 @@
 name: skuppered-services 
-bindings:
-    - name: oltp-rdbms 
-      host: host.docker.internal 
-      service:
-        address: oltp-rdbms:5432 
-        protocol: tcp 
-        ports:
-           - 5432 
-      target_ports:
-           - 5432 
-    - name: on-prem-app
-      host: host.docker.internal
-      service:
-        address: on-prem-app:8080
-        protocol: http
-        ports:
-           - 8080
-      target_ports:
-           - 8080
 forwards:
-  - name: transactor:8080
+  - name: remote-hello:8080
     host: 0.0.0.0
     service:
-      address: transactor-forward:8080
+      address: hello:8080
       protocol: http
       ports:
-        - 8081
+        - 8080
     target_ports:
       - 8081
 qdr-listeners:

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hello
+  name: hello
+  annotations:
+    skupper.io/proxy: "http"  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello
+  template:
+    metadata:
+      labels:
+        app: hello
+    spec:
+      containers:
+      - name: hello
+        image: docker.io/burrsutter/hello:1.0.0
+        imagePullPolicy: Always
+        env:
+          - name: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION
+            value: notused
+          - name: QUARKUS_DATASOURCE_JDBC_URL
+            value: jdbc:postgresql://oltp-rdbms:5432/notused
+          - name: QUARKUS_DATASOURCE_USERNAME
+            value: notused
+          - name: QUARKUS_DATASOURCE_PASSWORD
+            value: notused
+        resources:
+          requests: 
+            memory: "200Mi" 
+            cpu: "500m" 
+          limits:
+            memory: "200Mi"
+            cpu: "500m" 
+        ports:
+        - containerPort: 8080
+          name: "http"
