@@ -4,8 +4,8 @@ elif [ "$type" == "docker" ] || [ "$type" == "podman" ]; then
     else
         network_config="--hostname ${gateway_name} $(python3 ./captureports.py config/skrouterd.json)"
     fi
-#    ${type} run --restart always -d \
-    ${type} run --restart always -it \
+#     ${type} run --restart always -it \
+      ${type} run --restart always -d \
        --name ${gateway_name} ${network_config} \
        -e QDROUTERD_CONF_TYPE=json \
        -e QDROUTERD_CONF=/opt/skupper/config/skrouterd.json \

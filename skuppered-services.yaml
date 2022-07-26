@@ -15,9 +15,9 @@ bindings:
         address: on-prem-app:8080
         protocol: http
         ports:
-           - 8080
+          - 8080
       target_ports:
-           - 8080
+        - 8080
 qdr-listeners:
     - name: amqp
       host: localhost

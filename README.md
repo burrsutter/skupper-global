@@ -591,7 +591,7 @@ mkdir gateway
 tar -xvf ./bundle/forwarded-services/skuppered-forwarded-services.tar.gz --directory gateway
 ```
 
-Edit gatway/launch.sh, replacing `elif [ "$type" == "docker" ] || [ "$type" == "podman" ]; then`  with contents of launch.sh from the root of this repo.
+Edit gatway/launch.sh, replacing `elif [ "$type" == "docker" ] || [ "$type" == "podman" ]; then`  at line 83 with contents of launch.sh from the root of this repo.
 
 ![before](images/edit-launch-sh-before.png)
 
@@ -615,10 +615,24 @@ docker ps
 ```
 
 ```
-CONTAINER ID   IMAGE                                  COMMAND                  CREATED         STATUS        PORTS     NAMES
-f2f714fcca3b   quay.io/skupper/skupper-router:2.0.2   "/home/skrouterd/bin…"   2 seconds ago   Up 1 second             skuppered-services
+CONTAINER ID   IMAGE                                  COMMAND                  CREATED         STATUS         PORTS                                                                                NAMES
+1891ce652685   quay.io/skupper/skupper-router:2.0.2   "/home/skrouterd/bin…"   3 seconds ago   Up 2 seconds   0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:8081->8081/tcp, 0.0.0.0:55672->55672/tcp   skuppered-forwarded-services
 ```
 
 ```
 curl localhost:8081
+```
+
+```
+Default via Quarkus 1 on hello-6d7ffb887f-r26mp
+```
+
+![forwards](images/forwards-working.png)
+
+
+To clean up, `./remove.sh`
+
+
+```
+az aks delete --resource-group myAKSTokyoResourceGroup --name tokyo
 ```

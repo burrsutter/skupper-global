@@ -5,9 +5,9 @@ forwards:
     service:
       address: hello:8080
       protocol: http
-      ports:
-        - 8081
-    target_ports:
+      ports: # localhost port
+        - 8081 
+    target_ports: # remote cluster port
       - 8080
 qdr-listeners:
     - name: amqp
