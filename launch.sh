@@ -1,5 +1,3 @@
-#!/bin/bash -e
-
 elif [ "$type" == "docker" ] || [ "$type" == "podman" ]; then
     if [[ "$OSTYPE" == "linux"* ]]; then
         network_config="--network host"
