@@ -586,10 +586,16 @@ mkdir gateway
 
 tar -xvf ./bundle/forwarded-services/skuppered-services.tar.gz --directory gateway
 
+```
+
+```
+cp launch.sh ./gateway/
+
 cd gateway
 
 chmod +x *.sh
 ```
+
 
 ```
 ./launch.sh -t docker
