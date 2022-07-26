@@ -579,7 +579,6 @@ rm -rf gateway
 
 ```
 mkdir -p bundle/forwarded-services
-cp captureports.py bundle/forwarded-services
 ```
 
 ```
@@ -589,7 +588,7 @@ skupper gateway generate-bundle skuppered-forwarded-services.yaml ./bundle/forwa
 ```
 mkdir gateway
 
-tar -xvf ./bundle/forwarded-services/skuppered-services.tar.gz --directory gateway
+tar -xvf ./bundle/forwarded-services/skuppered-forwarded-services.tar.gz --directory gateway
 ```
 
 Edit gatway/launch.sh, replacing `elif [ "$type" == "docker" ] || [ "$type" == "podman" ]; then`  with contents of launch.sh from the root of this repo.
@@ -599,6 +598,8 @@ Edit gatway/launch.sh, replacing `elif [ "$type" == "docker" ] || [ "$type" == "
 ![after](images/edit-launch-sh-after.png)
 
 ```
+cp captureports.py ./gateway
+
 cd gateway
 
 chmod +x *.sh

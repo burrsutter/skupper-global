@@ -1,4 +1,4 @@
-name: skuppered-services 
+name: skuppered-forwarded-services 
 forwards:
   - name: remote-hello:8080
     host: 0.0.0.0
@@ -6,9 +6,9 @@ forwards:
       address: hello:8080
       protocol: http
       ports:
-        - 8080
+        - 8081
     target_ports:
-      - 8081
+      - 8080
 qdr-listeners:
     - name: amqp
       host: localhost
