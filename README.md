@@ -80,20 +80,55 @@ The site console url is:  https://20.27.186.231:8080
 The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
 ```
 
-## Expose on-premises services
+## Expose & map on-premises & cluster services
 
 ```
-docker ps
-CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+tokyo          on-premises 
+----------     ----------------
+oltp-rdbms  -> localhost:5432
+on-prem-app -> localhost:8080
+transactor  <- localhost:8081 
 ```
 
-Gateway launch on localhost/laptop
+### Tokyo
+
+#### Deploy the on-cluster application
 
 ```
-skupper gateway init --config skuppered-services.yaml --type docker 
+kubectl apply -f transactor-deployment.yaml
 ```
 
-Create the proxy Kubernetes Services that will actually be implmented on-premises/on-laptop as they will have been Skupper'ized
+```
+kubectl get pods
+NAME                                          READY   STATUS    RESTARTS     AGE
+skupper-router-6fc4f4b9b9-tx5qw               2/2     Running   0            23m
+skupper-service-controller-649d5f4665-dpwk8   1/1     Running   0            22m
+transactor-75fd9b8bb7-fwj8k                   1/1     Running   1 (5s ago)   21s
+```
+
+Note: transactor will be crashlooping until we get the database stood up on-premises and connected via Skupper
+
+```
+kubectl get services
+NAME                   TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                           AGE
+skupper                LoadBalancer   10.0.162.251   20.27.0.204   8080:30127/TCP,8081:32132/TCP     23m
+skupper-router         LoadBalancer   10.0.65.161    20.27.0.141   55671:32747/TCP,45671:32761/TCP   23m
+skupper-router-local   ClusterIP      10.0.2.253     <none>        5671/TCP                          23m
+transactor             ClusterIP      10.0.97.89     <none>        8080/TCP                          33s
+```
+
+The service magically appears because of a special annotation
+
+```
+  annotations:
+    skupper.io/proxy: "http"  
+```
+
+```
+kubectl set env deployment/transactor LOCATION=Tokyo
+```
+
+Create proxy/skuppered services on Toyko (no pods, implemented on-premises)
 
 ```
 skupper service create oltp-rdbms 5432
@@ -102,18 +137,75 @@ skupper service create on-prem-app 8080 --mapping http
 
 ```
 kubectl get services
-NAME                   TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                           AGE
-oltp-rdbms             ClusterIP      10.0.8.159     <none>          5432/TCP                          10s
-on-prem-app            ClusterIP      10.0.244.222   <none>          8080/TCP                          6s
-skupper                LoadBalancer   10.0.50.0      20.27.186.231   8080:31618/TCP,8081:30211/TCP     5m41s
-skupper-router         LoadBalancer   10.0.219.23    20.27.186.161   55671:32425/TCP,45671:32565/TCP   5m57s
-skupper-router-local   ClusterIP      10.0.57.212    <none>          5671/TCP                          5m57s
+NAME                   TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                           AGE
+oltp-rdbms             ClusterIP      10.0.37.88     <none>        5432/TCP                          14s
+on-prem-app            ClusterIP      10.0.138.239   <none>        8080/TCP                          10s
+skupper                LoadBalancer   10.0.162.251   20.27.0.204   8080:30127/TCP,8081:32132/TCP     60m
+skupper-router         LoadBalancer   10.0.65.161    20.27.0.141   55671:32747/TCP,45671:32761/TCP   60m
+skupper-router-local   ClusterIP      10.0.2.253     <none>        5671/TCP                          60m
+transactor             ClusterIP      10.0.97.89     <none>        8080/TCP                          37m
+```
+
+
+## Expose on-premises/local services
+
+```
+docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+Gateway launch on localhost/laptop
+
+The use of Forwards involves the use of the Bundle
+
+```
+rm -rf bundle
+rm -rf gateway
+```
+
+```
+mkdir -p bundle/all-services
+```
+
+```
+skupper gateway generate-bundle skuppered-all-services.yaml ./bundle/all-services
+```
+
+```
+mkdir gateway
+
+tar -xvf ./bundle/all-services/skuppered-all-services.tar.gz --directory gateway
+```
+
+Edit gatway/launch.sh, replacing `elif [ "$type" == "docker" ] || [ "$type" == "podman" ]; then`  at line 83 with contents of launch.sh from the root of this repo.
+
+![before](images/edit-launch-sh-before.png)
+
+![after](images/edit-launch-sh-after.png)
+
+```
+cp captureports.py ./gateway
+
+cd gateway
+
+chmod +x *.sh
+```
+
+
+```
+./launch.sh -t docker
+```
+
+```
+docker ps
+CONTAINER ID   IMAGE                                  COMMAND                  CREATED         STATUS         PORTS                                                                                NAMES
+da4847502fea   quay.io/skupper/skupper-router:2.0.2   "/home/skrouterd/bin…"   4 seconds ago   Up 3 seconds   0.0.0.0:5671-5672->5671-5672/tcp, 0.0.0.0:8081->8081/tcp, 0.0.0.0:55672->55672/tcp   skuppered-all-services
 ```
 
 ```
 skupper status
-Skupper is enabled for namespace "oltp" in interior mode. It is connected to 1 other site. It has 2 exposed services.
-The site console url is:  https://20.27.186.231:8080
+Skupper is enabled for namespace "oltp" with site name "tokyo" in interior mode. It is connected to 1 other site. It has 3 exposed services.
+The site console url is:  https://20.27.0.204:8080
 The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
 ```
 
@@ -121,8 +213,39 @@ The credentials for internal console-auth mode are held in secret: 'skupper-cons
 skupper service status
 Services exposed through Skupper:
 ├─ on-prem-app (http port 8080)
+├─ transactor (http port 8080)
+│  ╰─ Targets:
+│     ╰─ app=transactor name=transactor
 ╰─ oltp-rdbms (tcp port 5432)
 ```
+
+Start the localhost/on-premises PostgreSQL.  I am using PostgreSQL 14 https://www.postgresql.org/download/macosx/ and pgAdmin4 https://www.pgadmin.org/download/
+
+![pgAdmin4](images/pgAdmin4.png)
+
+
+Test the remote/forwarded transactor service
+
+```
+curl localhost:8081
+Tokyo needs a number
+```
+
+Start the localhost/on-premises transactor
+
+```
+cd transaction
+export HOSTNAME="localhost"
+export LOCATION="on-premises"
+
+mvn quarkus:dev
+```
+
+```
+curl localhost:8080
+on-premises needs a number
+```
+
 
 ## On Cluster Tests
 
@@ -134,7 +257,7 @@ kubectl exec -it deploy/skupper-router -c router -- bash
 
 ```
 curl on-prem-app:8080
-Give me a number
+on-premises needs a number
 ```
 
 ```
@@ -170,10 +293,10 @@ select * from work;
 ```
 
 ```
-id | location  |       message       |    processedby     | processingtime | result
-----+-----------+---------------------+--------------------+----------------+--------
-  1 | localhost | Processed Recs: 399 | silversurfer.local |            133 |    762
-  2 | localhost | Processed Recs: 548 | silversurfer.local |            274 |    268
+ id |  location   |       message        | processedby | processingtime | result
+----+-------------+----------------------+-------------+----------------+--------
+  1 | on-premises | Processed Recs: 1154 | localhost   |            577 |   3432
+  2 | on-premises | Processed Recs: 1730 | localhost   |            865 |   5172
 ```
 
 
@@ -184,48 +307,18 @@ quit
 exit
 ```
 
-## Push Worker to Cluster
-
-```
-kubectl apply -f transactor-deployment.yaml
-```
-
-```
-kubectl get services
-NAME                   TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                           AGE
-oltp-rdbms             ClusterIP      10.0.8.132     <none>          5432/TCP                          5h49m
-on-prem-app            ClusterIP      10.0.181.77    <none>          8080/TCP                          5h49m
-skupper                LoadBalancer   10.0.16.148    20.188.21.153   8080:30652/TCP,8081:31420/TCP     5h51m
-skupper-router         LoadBalancer   10.0.32.34     20.188.19.119   55671:32394/TCP,45671:31407/TCP   5h51m
-skupper-router-local   ClusterIP      10.0.183.208   <none>          5671/TCP                          5h51m
-transactor             ClusterIP      10.0.116.119   <none>          8080/TCP                          82s
-```
-
-Because of the special annotation on the Deployment
-
-```
-  annotations:
-    skupper.io/proxy: "http"  
-```
-
-and the matching exposed container port
-
-```
-        ports:
-        - containerPort: 8080
-          name: "http"
-```
-
-```
-kubectl set env deployment/transactor LOCATION=Tokyo
-```
-
 ```
 kubectl exec -it deploy/transactor -- bash 
 ```
 
 ```
 curl localhost:8080/2
+```
+
+![pgAdmin](images/pgadmin-2.png)
+
+```
+exit
 ```
 
 ### Console: Tokyo
@@ -241,6 +334,7 @@ Password
 
 ```
 CONSOLEPASSWORDTOKYO=$(kubectl get secret skupper-console-users -o jsonpath='{.data.admin}' | base64 -d)
+echo $CONSOLEPASSWORDTOKYO
 ```
 
 ```
@@ -250,7 +344,34 @@ open https://$CONSOLETOKYO
 Login with `admin` and $CONSOLEPASSWORDTOKYO
 
 
+## Load Generator
 
+```
+cd load-gen
+mvn quarkus:dev
+```
+
+To start the load generation
+
+```
+curl localhost:8082/2
+```
+
+To stop the load generation
+
+```
+curl localhost:8082/0
+```
+
+```
+select * from work;
+```
+
+lauren
+
+```
+------------------------------------------
+```
 
 ## Add another cluster: CapeTown
 
@@ -535,6 +656,12 @@ az aks delete --resource-group myAKSTokyoResourceGroup --name tokyo
 ```
 
 # Forwards Testing
+
+https://skupper.netlify.app/skupper/latest/cli/index.html#gateway-reference
+
+https://access.redhat.com/documentation/en-us/red_hat_application_interconnect/1.0/html/using_the_application_interconnect_cli/exposing-services-local#exporting-gateway
+
+
 
 ```
 export KUBECONFIG=/Users/burr/xKS/.kubeconfig/aks-tokyo-config

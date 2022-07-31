@@ -20,8 +20,9 @@ public class Worker {
     @GET
     @Produces(MediaType.TEXT_PLAIN)
     public String index() {        
-        System.out.println("hostname: " + hostname + " bound: " + bound);
-        return "Give me a number";
+        System.out.println("hostname: " + hostname + " location: " + location + " bound: " + bound);
+
+        return location + " needs a number";
     }
 
     @GET

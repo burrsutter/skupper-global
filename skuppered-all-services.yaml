@@ -1,4 +1,4 @@
-name: skuppered-services 
+name: skuppered-all-services 
 bindings:
     - name: oltp-rdbms 
       host: host.docker.internal 
@@ -18,6 +18,16 @@ bindings:
           - 8080
       target_ports:
         - 8080
+forwards:
+  - name: remote-transactor:8080
+    host: 0.0.0.0
+    service:
+      address: transactor:8080
+      protocol: http
+      ports: # localhost port
+        - 8081 
+    target_ports: # remote cluster port
+      - 8080        
 qdr-listeners:
     - name: amqp
       host: localhost
