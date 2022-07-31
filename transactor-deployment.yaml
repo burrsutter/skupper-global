@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: transactor
-        image: docker.io/burrsutter/transaction:1.0.0
+        image: docker.io/burrsutter/transaction:1.0.1
         imagePullPolicy: Always
         env:
           - name: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION

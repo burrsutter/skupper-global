@@ -19,11 +19,11 @@ mvn clean compile package
 ```
 
 ```
-docker build -f src/main/docker/Dockerfile.jvm -t docker.io/burrsutter/transaction:1.0.0 .
+docker build -f src/main/docker/Dockerfile.jvm -t docker.io/burrsutter/transaction:1.0.1 .
 ```
 
 ```
-docker push docker.io/burrsutter/transaction:1.0.0
+docker push docker.io/burrsutter/transaction:1.0.1
 ```
 
 ```

@@ -1,0 +1,22 @@
+Unable to retrieve network information: timed out
+
+Loading just local information:
+ It is connected to 2 other sites (1 indirectly). Number of exposed services: 3
+Sites:
+╰─ [local] d2c4ee0 - capetown 
+   mode: interior
+   name: capetown
+   namespace: oltp
+   version: quay.io/skupper/skupper-router:2.0.2 (sha256:e563f069635f)
+   ╰─ Services:
+      ├─ name: oltp-rdbms
+      │  address: oltp-rdbms: 5432
+      │  protocol: tcp
+      ├─ name: on-prem-app
+      │  address: on-prem-app: 8080
+      │  protocol: http
+      ╰─ name: transactor
+         address: transactor: 8080
+         protocol: http
+         ╰─ Targets:
+            ╰─ name: transactor

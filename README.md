@@ -106,7 +106,7 @@ skupper-service-controller-649d5f4665-dpwk8   1/1     Running   0            22m
 transactor-75fd9b8bb7-fwj8k                   1/1     Running   1 (5s ago)   21s
 ```
 
-Note: transactor will be crashlooping until we get the database stood up on-premises and connected via Skupper
+Note: transactor will be crashlooping until we get the database stood up on-premises and wired up via Skupper
 
 ```
 kubectl get services
@@ -354,13 +354,13 @@ mvn quarkus:dev
 To start the load generation
 
 ```
-curl localhost:8082/2
+curl localhost:8082/sendload/1
 ```
 
 To stop the load generation
 
 ```
-curl localhost:8082/0
+curl localhost:8082/sendload/0
 ```
 
 ```
@@ -416,8 +416,8 @@ skupper link create token.yaml
 
 ```
 skupper status
-Skupper is enabled for namespace "oltp" in interior mode. It is connected to 2 other sites (1 indirectly). It has 2 exposed services.
-The site console url is:  https://a3df2817e3ef7406fbdaa0b081100751-262154857.af-south-1.elb.amazonaws.com:8080
+Skupper is enabled for namespace "oltp" with site name "capetown" in interior mode. It is connected to 2 other sites (1 indirectly). It has 3 exposed services.
+The site console url is:  https://a807235ccf1bd47d995a949075282fb0-1876990102.af-south-1.elb.amazonaws.com:8080
 The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
 ```
 
@@ -427,38 +427,13 @@ kubectl get services
 
 ```
 NAME                   TYPE           CLUSTER-IP       EXTERNAL-IP                                                                PORT(S)                           AGE
-oltp-rdbms             ClusterIP      10.100.155.195   <none>                                                                     5432/TCP                          42s
-on-prem-app            ClusterIP      10.100.12.66     <none>                                                                     8080/TCP                          42s
-skupper                LoadBalancer   10.100.26.136    a3df2817e3ef7406fbdaa0b081100751-262154857.af-south-1.elb.amazonaws.com    8080:31256/TCP,8081:32340/TCP     3m39s
-skupper-router         LoadBalancer   10.100.193.113   aea01ffacec924f05aeb6e5b948befcb-1149588767.af-south-1.elb.amazonaws.com   55671:30820/TCP,45671:30467/TCP   3m45s
-skupper-router-local   ClusterIP      10.100.154.40    <none>                                                                     5671/TCP                          3m45s
+oltp-rdbms             ClusterIP      10.100.184.60    <none>                                                                     5432/TCP                          43s
+on-prem-app            ClusterIP      10.100.169.73    <none>                                                                     8080/TCP                          43s
+skupper                LoadBalancer   10.100.19.144    a807235ccf1bd47d995a949075282fb0-1876990102.af-south-1.elb.amazonaws.com   8080:30052/TCP,8081:31382/TCP     9m47s
+skupper-router         LoadBalancer   10.100.89.109    a0f1a84befd814eccb919848d1d7493c-1233493713.af-south-1.elb.amazonaws.com   55671:32430/TCP,45671:30105/TCP   9m53s
+skupper-router-local   ClusterIP      10.100.104.89    <none>                                                                     5671/TCP                          9m53s
+transactor             ClusterIP      10.100.193.245   <none>                                                                     8080/TCP                          43s
 ```
-
-```
-skupper service status
-Services exposed through Skupper:
-├─ oltp-rdbms (tcp port 5432)
-╰─ on-prem-app (http port 8080)
-```
-
-```
-kubectl apply -f transaction-deployment.yaml
-```
-
-```
-kubectl set env deployment/transactor LOCATION=CapeTown
-```
-
-```
-NAME                   TYPE           CLUSTER-IP       EXTERNAL-IP                                                                PORT(S)                           AGE
-oltp-rdbms             ClusterIP      10.100.112.247   <none>                                                                     5432/TCP                          5h58m
-on-prem-app            ClusterIP      10.100.227.207   <none>                                                                     8080/TCP                          5h58m
-skupper                LoadBalancer   10.100.170.197   a28befab4a4d44f5493e5a085f3a6c2d-2032781943.af-south-1.elb.amazonaws.com   8080:30744/TCP,8081:31787/TCP     6h2m
-skupper-router         LoadBalancer   10.100.85.149    a75e6fc725f9e45d298962a5f541f692-225662935.af-south-1.elb.amazonaws.com    55671:31791/TCP,45671:32438/TCP   6h2m
-skupper-router-local   ClusterIP      10.100.183.213   <none>                                                                     5671/TCP                          6h2m
-transactor             ClusterIP      10.100.112.47    <none>                                                                     8080/TCP                          12m
-```
-
 
 ```
 skupper service status
@@ -466,8 +441,24 @@ Services exposed through Skupper:
 ├─ oltp-rdbms (tcp port 5432)
 ├─ on-prem-app (http port 8080)
 ╰─ transactor (http port 8080)
-   ╰─ Targets:
-      ╰─ app=transactor name=transactor
+```
+
+```
+kubectl apply -f transactor-deployment.yaml
+```
+
+```
+kubectl set env deployment/transactor LOCATION=CapeTown
+```
+
+```
+skupper service status
+Services exposed through Skupper:
+├─ transactor (http port 8080)
+│  ╰─ Targets:
+│     ╰─ app=transactor name=transactor
+├─ oltp-rdbms (tcp port 5432)
+╰─ on-prem-app (http port 8080)
 ```
 
 ```
@@ -478,7 +469,13 @@ kubectl exec -it deploy/transactor -- bash
 curl localhost:8080/2
 ```
 
-![pgAdmin](images/pgadmin-2.png)
+![pgAdmin](images/pgadmin-3.png)
+
+Note: to wipe out all records on the central database
+
+```
+curl localhost:8080/delete
+```
 
 
 ### Console: Cape Town
@@ -504,6 +501,27 @@ Login with `admin` and $CONSOLEPASSWORDCAPETOWN
 
 ![Skupper Cape Town](images/skupper-console-capetown-1.png)
 
+
+## Fail-over
+
+### Tokyo
+
+```
+kubectl scale --replicas=0 deployment/transactor
+```
+
+Send some load
+
+```
+curl localhost:8082/sendload/1
+```
+
+Stop the load
+```
+curl localhost:8082/sendload/0
+```
+
+
 ## Add Sydney
 
 ```
@@ -526,7 +544,7 @@ skupper init --site-name sydney
 ```
 skupper status
 Skupper is enabled for namespace "oltp" with site name "sydney" in interior mode. It is not connected to any other sites. It has no exposed services.
-The site console url is:  https://35.189.26.175:8080
+The site console url is:  https://35.244.77.35:8080
 The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
 ```
 
@@ -545,12 +563,13 @@ skupper link create token.yaml
 ```
 skupper service status
 Services exposed through Skupper:
-├─ oltp-rdbms (tcp port 5432)
-╰─ on-prem-app (http port 8080)
+├─ on-prem-app (http port 8080)
+├─ transactor (http port 8080)
+╰─ oltp-rdbms (tcp port 5432)
 ```
 
 ```
-kubectl apply -f transaction-deployment.yaml
+kubectl apply -f transactor-deployment.yaml
 ```
 
 ```
@@ -565,8 +584,11 @@ kubectl exec -it deploy/transactor -- bash
 curl localhost:8080/2
 ```
 
-![pgAdmin](images/pgadmin-3.png)
+![pgAdmin](images/pgadmin-4.png)
 
+```
+exit
+```
 
 ### Console: Sydney
 
@@ -590,58 +612,26 @@ open https://$CONSOLESYDNEY
 Login with `admin` and $CONSOLEPASSWORDCAPETOWN
 
 
-## Gateway transactor to on-premises
+
+## Load Generator
 
 ```
-skupper gateway delete
-```
-
-```
-docker ps
-CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
-```
-
-The use of Forwards involves the use of the Bundle
-
-```
-mkdir -p bundle/localhost-services
-cp captureports.py bundle/localhost-services
+ curl localhost:8081/delete
 ```
 
 ```
-skupper gateway generate-bundle skuppered-forwarded-services.yaml ./bundle/localhost-services
+curl localhost:8082/sendload/1
 ```
 
 ```
-mkdir gateway
-
-tar -xvf ./bundle/localhost-services/skuppered-services.tar.gz --directory gateway
-
-cd gateway
-
-chmod +x *.sh
+curl localhost:8082/sendload/0
 ```
-
-```
-./launch.sh -t docker
-```
-
-```
-docker ps
-```
-
-```
-CONTAINER ID   IMAGE                                  COMMAND                  CREATED          STATUS          PORTS     NAMES
-630b501cb1e5   quay.io/skupper/skupper-router:2.0.2   "/home/skrouterd/bin…"   15 seconds ago   Up 14 seconds             skuppered-services
-```
-
-```
-skupper gateway forward transactor 8081
-```
-
-
 
 ## Clean up
+
+```
+.\gateway\remove.sh
+```
 
 ```
 gcloud container clusters delete sydney --zone australia-southeast1
