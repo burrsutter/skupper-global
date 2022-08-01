@@ -6,11 +6,8 @@ Amazon, Google and Azure
 
 ![Postgres](images/postgres-3-clouds.png)
 
-## On Cluster (KUBECONFIG)
 
-This creates an AKS in Japan but any OpenShift or Kubernetes cluster would work
-
-#### Create Cluster
+## Create Cluster: Tokyo
 
 ```
 export KUBECONFIG=/Users/burr/xKS/.kubeconfig/aks-tokyo-config
@@ -376,7 +373,7 @@ select * from work;
 ```
 
 
-## Add another cluster: CapeTown
+## Create Cluster: CapeTown
 
 ```
 export KUBECONFIG=/Users/burr/xKS/.kubeconfig/capetown-config
@@ -525,7 +522,7 @@ curl localhost:8082/sendload/0
 ```
 
 
-## Add Sydney
+## Create Cluster: Sydney
 
 ```
 export KUBECONFIG=/Users/burr/xKS/.kubeconfig/sydney-config
