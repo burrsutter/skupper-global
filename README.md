@@ -354,7 +354,7 @@ mvn quarkus:dev
 To start the load generation
 
 ```
-curl localhost:8082/sendload/1
+curl localhost:8082/sendload/10
 ```
 
 To stop the load generation
@@ -367,11 +367,6 @@ curl localhost:8082/sendload/0
 select * from work;
 ```
 
-lauren
-
-```
-------------------------------------------
-```
 
 ## Add another cluster: CapeTown
 
@@ -513,7 +508,7 @@ kubectl scale --replicas=0 deployment/transactor
 Send some load
 
 ```
-curl localhost:8082/sendload/1
+curl localhost:8082/sendload/10
 ```
 
 Stop the load
@@ -573,6 +568,16 @@ kubectl apply -f transactor-deployment.yaml
 ```
 
 ```
+skupper service status
+Services exposed through Skupper:
+├─ oltp-rdbms (tcp port 5432)
+├─ on-prem-app (http port 8080)
+╰─ transactor (http port 8080)
+   ╰─ Targets:
+      ╰─ app=transactor name=transactor
+```
+
+```
 kubectl set env deployment/transactor LOCATION=Sydney
 ```
 
@@ -619,18 +624,31 @@ Login with `admin` and $CONSOLEPASSWORDCAPETOWN
  curl localhost:8081/delete
 ```
 
+Start load
+
 ```
-curl localhost:8082/sendload/1
+curl localhost:8082/sendload/10
 ```
 
+currency of `10` to see the load-balancing
+
+
+Stop load
 ```
 curl localhost:8082/sendload/0
 ```
 
+![loaded](images/load-balanced.png)
+
 ## Clean up
 
 ```
-.\gateway\remove.sh
+./gateway/remove.sh
+```
+
+```
+docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 ```
 
 ```
@@ -644,6 +662,21 @@ eksctl delete cluster --name capetown --region af-south-1
 ```
 az aks delete --resource-group myAKSTokyoResourceGroup --name tokyo
 ```
+
+```
+gcloud container clusters list
+```
+
+```
+eksctl get cluster --region af-south-1
+```
+
+```
+az aks list --resource-group myAKSTokyoResourceGroup
+```
+
+https://www.screencast.com/t/ocP2Gy7Y
+
 
 # Forwards Testing
 
@@ -711,6 +744,7 @@ tar -xvf ./bundle/forwarded-services/skuppered-forwarded-services.tar.gz --direc
 Edit gatway/launch.sh, replacing `elif [ "$type" == "docker" ] || [ "$type" == "podman" ]; then`  at line 83 with contents of launch.sh from the root of this repo.
 
 ![before](images/edit-launch-sh-before.png)
+
 
 ![after](images/edit-launch-sh-after.png)
 
